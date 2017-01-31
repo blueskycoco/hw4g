@@ -29,14 +29,14 @@ bool socket_out(int sock, void *data, int len)
 
 	sockaddr.sin_family = AF_INET;
 	sockaddr.sin_port = htons(RTP_OUT_PORT);  
-	sockaddr.sin_addr.s_addr = inet_addr("192.168.1.123");  
+	sockaddr.sin_addr.s_addr = inet_addr("127.0.0.1");  
 
 	FD_ZERO(&writefs);
 	FD_SET(sock, &writefs);
 
 	tv.tv_sec = 10;
 	tv.tv_usec = 0;
-	if (select(sock, NULL, &writefs,
+	if (select(sock + 1, NULL, &writefs,
 				NULL, &tv) > 0)
 	{
 		if (FD_ISSET(sock, &writefs))
@@ -58,13 +58,13 @@ bool socket_out(int sock, void *data, int len)
 	
 	return result;
 }
-int socket_in(int sock, void *data, int len, int port)
+int socket_in(int sock, void **data, int len, int port)
 {
 	char buf[2048] = {0};
 	struct timeval tv;
 	fd_set readfs;
 	int read_len = 0;
-	socklen_t clientlen;
+	socklen_t clientlen = sizeof(struct sockaddr_in);;
 	struct sockaddr_in sockaddr;
 
 	sockaddr.sin_family = AF_INET;
@@ -72,14 +72,14 @@ int socket_in(int sock, void *data, int len, int port)
 	sockaddr.sin_addr.s_addr = INADDR_ANY;  
 
 	FD_ZERO(&readfs);
-	FD_SET(sock_rtp_in, &readfs);
+	FD_SET(sock, &readfs);
 
 	tv.tv_sec = 10;
 	tv.tv_usec = 0;
-	if (select(sock_rtp_in, &readfs, NULL,
+	if (select(sock + 1, &readfs, NULL,
 				NULL, &tv) > 0)
 	{
-		if (FD_ISSET(sock_rtp_in, &readfs))
+		if (FD_ISSET(sock, &readfs))
 		{
 			read_len = recvfrom(sock, buf, len, 0, 
 				(struct sockaddr *)&sockaddr, &clientlen);
@@ -89,8 +89,8 @@ int socket_in(int sock, void *data, int len, int port)
 			}
 			else
 			{
-				data = malloc(read_len * sizeof(char));
-				memcpy(data, buf, read_len);
+				*data = malloc(read_len * sizeof(char));
+				memcpy(*data, buf, read_len);
 			}
 		}
 		else
@@ -102,6 +102,8 @@ int socket_in(int sock, void *data, int len, int port)
 }
 int main(int argc, void *argv[])
 {
+	unsigned char buf[10] = {0};
+	unsigned char *ptr = NULL;
 	if((sock_rtp_in = socket(AF_INET,SOCK_DGRAM,0))==-1)
 	{
 		perror("create sock rtp in failed\n");
@@ -113,10 +115,36 @@ int main(int argc, void *argv[])
 		perror("create sock rtp out failed\n");
 		return -1;
 	}
+	else
+	{
+		struct sockaddr_in sockaddr;
+		sockaddr.sin_family = AF_INET;
+		sockaddr.sin_addr.s_addr = INADDR_ANY;
+		sockaddr.sin_port = htons(1122);
+		if(bind(sock_rtp_out, (struct sockaddr *)&sockaddr, sizeof(struct sockaddr)) == -1)
+		{
+			perror("bind to port 1122 failed\n");
+		}
+	}
 	if((sock_server_in = socket(AF_INET,SOCK_DGRAM,0))==-1)
 	{
 		perror("create sock server in failed\n");
 		return -1;
 	}
+
+	for (int i = 0; i < 10; i++)
+		buf[i] = i;
+	socket_out(sock_rtp_out, buf, 10);
+	int len;
+	if ((len = socket_in(sock_rtp_out, (void **)&ptr, 100, 1122)) > 0)
+	{
+		for (int i = 0; i < len; i++)
+			printf("%c", ptr[i]);
+		printf("\n");
+		free(ptr);
+	}
+	close(sock_rtp_in);
+	close(sock_rtp_out);
+	close(sock_server_in);
 	return 0;
 }
