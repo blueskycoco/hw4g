@@ -60,6 +60,7 @@ bool socket_out(int sock, void *data, int len)
 }
 int socket_in(int sock, void *data, int len, int port)
 {
+	char buf[2048] = {0};
 	struct timeval tv;
 	fd_set readfs;
 	int read_len = 0;
@@ -80,11 +81,16 @@ int socket_in(int sock, void *data, int len, int port)
 	{
 		if (FD_ISSET(sock_rtp_in, &readfs))
 		{
-			read_len = recvfrom(sock, data, len, 0, 
+			read_len = recvfrom(sock, buf, len, 0, 
 				(struct sockaddr *)&sockaddr, &clientlen);
 			if (read_len < 0)
 			{
 				perror("recvfrom error \n");
+			}
+			else
+			{
+				data = malloc(read_len * sizeof(char));
+				memcpy(data, buf, read_len);
 			}
 		}
 		else
