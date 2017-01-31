@@ -1,12 +1,16 @@
 #include "llist.h"
+#include <pthread.h>
 
+pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 linklist create_null_list_link(void)
 {
+	pthread_mutex_lock(&lock);
     linklist llist = (linklist)malloc(sizeof(struct node));
     if (llist != NULL)
         llist->next = NULL;
     else
         fprintf(stderr, "out of space!\n");
+	pthread_mutex_unlock(&lock);
 
     return llist;
 }
@@ -18,6 +22,7 @@ int is_nulllist_link(linklist llist)
 
 linklist insert_link(linklist llist, void *packet)
 {
+	pthread_mutex_lock(&lock);
     pnode q = (pnode)malloc(sizeof(struct node));
     if (q == NULL) {
         fprintf(stderr, "out of space!\n");
@@ -26,6 +31,7 @@ linklist insert_link(linklist llist, void *packet)
         q->next = llist->next;
         llist->next = q;
     }
+	pthread_mutex_unlock(&lock);
     return llist;
 }
 
@@ -34,6 +40,7 @@ linklist delete_node(linklist llist, void *packet)
     if (llist->next == NULL)
         return llist;
 
+	pthread_mutex_lock(&lock);
     pnode q = llist->next;
     pnode p = llist;
     do {
@@ -47,6 +54,7 @@ linklist delete_node(linklist llist, void *packet)
         p = q;
         q = q->next;
     } while (q != NULL);
+	pthread_mutex_unlock(&lock);
 
     return llist;
 }
@@ -57,6 +65,7 @@ pnode delete_this_node(linklist llist, pnode this_pnode)
     if (llist->next == NULL)
         return llist;
 
+	pthread_mutex_lock(&lock);
     pnode q = llist->next;
     pnode p = llist;
 
@@ -71,6 +80,7 @@ pnode delete_this_node(linklist llist, pnode this_pnode)
         p = q;
         q = q->next;
     } while (q != NULL);
+	pthread_mutex_unlock(&lock);
 
     return p;
 }
@@ -85,12 +95,17 @@ pnode search_node(linklist llist, void *packet)
     if (is_nulllist_link(llist))
         return NULL;
 
+	pthread_mutex_lock(&lock);
     do {
         if (q->rtp == packet)
+		{
+			pthread_mutex_unlock(&lock);
             return q;
+		}
 
         q = q->next;
     } while (q != NULL);
+	pthread_mutex_unlock(&lock);
 
     return NULL;
 }
@@ -98,10 +113,12 @@ pnode search_node(linklist llist, void *packet)
 int num_node(linklist llist)
 {
     int n = 0;
+	pthread_mutex_lock(&lock);
     while (llist->next) {
         n++;
         llist = llist->next;
     }
+	pthread_mutex_unlock(&lock);
     return n;
 }
 
@@ -135,6 +152,7 @@ int free_linklist(linklist llist)
         llist->next = q;
         q = q->next;
     } while (q != NULL);
+	pthread_mutex_unlock(&lock);
     return 1;
 }
 
