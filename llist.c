@@ -27,7 +27,7 @@ linklist insert_link(linklist llist, void *packet)
     if (q == NULL) {
         fprintf(stderr, "out of space!\n");
     } else {
-        q->rtp = packet;
+        q->data = packet;
         q->next = llist->next;
         llist->next = q;
     }
@@ -44,9 +44,9 @@ linklist delete_node(linklist llist, void *packet)
     pnode q = llist->next;
     pnode p = llist;
     do {
-        if (q->rtp == packet) {
+        if (q->data == packet) {
             p->next = q->next;
-            free(q->rtp);
+            free(q->data);
             free(q);
             q = NULL;
             break;
@@ -72,7 +72,7 @@ pnode delete_this_node(linklist llist, pnode this_pnode)
     do {
         if (q == this_pnode) {
             p->next = q->next;
-            free(q->rtp);
+            free(q->data);
             free(q);
             q = NULL;
             break;
@@ -97,7 +97,7 @@ pnode search_node(linklist llist, void *packet)
 
 	pthread_mutex_lock(&lock);
     do {
-        if (q->rtp == packet)
+        if (q->data == packet)
 		{
 			pthread_mutex_unlock(&lock);
             return q;
@@ -147,7 +147,7 @@ int free_linklist(linklist llist)
 
     pnode q = llist->next->next; 
     do {
-    	free(llist->next->rtp);
+    	free(llist->next->data);
         free(llist->next);
         llist->next = q;
         q = q->next;

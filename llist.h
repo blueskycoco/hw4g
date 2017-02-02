@@ -10,7 +10,7 @@
 #endif
 
 struct node {
-    void *rtp;
+    void *data;
     struct node *next;
 };
 typedef struct node *pnode;
